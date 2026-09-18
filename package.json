@@ -1,0 +1,14 @@
+{
+  "name": "cavapasmarcher-studio",
+  "version": "0.2.0",
+  "private": true,
+  "description": "CavaPasMarcher website production studio",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="CavaPasMarcher — agence web augmentée par IA" />
+    <title>CavaPasMarcher — Studio web IA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand"><span class="brand-mark">✦</span><span>CavaPas<br /><b>Marcher</b></span></div>
+        <div class="workspace"><span class="avatar">W</span><span>Walid Bouchafra</span><span class="chevron">⌄</span></div>
+        <nav>
+          <p class="nav-label">PILOTAGE</p>
+          <button class="nav-item active" data-page="overview"><span>◈</span> Vue d’ensemble</button>
+          <button class="nav-item" data-page="prospects"><span>◎</span> Prospects <em>24</em></button>
+          <button class="nav-item" data-page="quotes"><span>▱</span> Devis <em>8</em></button>
+          <p class="nav-label">PRODUCTION</p>
+          <button class="nav-item" data-page="sites"><span>⌘</span> Sites en cours</button>
+          <button class="nav-item" data-page="library"><span>▦</span> Bibliothèque</button>
+          <p class="nav-label">ESPACE</p>
+          <button class="nav-item" data-page="settings"><span>⚙</span> Réglages</button>
+        </nav>
+        <div class="sidebar-bottom"><div class="upgrade"><span>✦</span><strong>Passez à Pro</strong><small>Scannez plus de prospects<br />et automatisez vos ventes.</small><button>Découvrir →</button></div><div class="help">? <span>Centre d’aide</span></div></div>
+      </aside>
+      <main class="main-content">
+        <header class="topbar"><div class="mobile-brand">✦ CavaPasMarcher</div><div class="top-actions"><span class="status-dot"></span> Système opérationnel <button class="icon-btn">⌕</button><button class="icon-btn">♧</button><span class="top-avatar">W</span></div></header>
+        <div id="app"></div>
+      </main>
+    </div>
+    <div id="toast" class="toast"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

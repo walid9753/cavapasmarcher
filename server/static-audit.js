@@ -1,8 +1,9 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
-const root = new URL('../', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../', import.meta.url));
 const ignored = new Set(['node_modules', '.git']);
 const failures = [];
 const exists = async (path) => { try { await readFile(path); return true; } catch { return false; } };

@@ -1,9 +1,9 @@
-/* CavaPasMarcher — API bridge with optional bearer authentication. */
+/* CavaPasMarcher — API bridge with dynamic bearer authentication. */
 (function () {
-  const API = window.CPM_API_URL || 'http://localhost:8787/api'; const token = window.CPM_API_TOKEN || '';
-  const $ = (id) => document.getElementById(id); const value = (id) => $(id)?.value?.trim() || '';
+  const API = window.CPM_API_URL || 'http://localhost:8787/api'; const $ = (id) => document.getElementById(id); const value = (id) => $(id)?.value?.trim() || '';
+  const getToken = () => window.CPMAuth?.token?.() || window.CPM_API_TOKEN || localStorage.getItem('cpm-session-token') || '';
   const toast = (message) => { const el = $('toast'); if (!el) return; el.textContent = message; el.classList.add('show'); window.setTimeout(() => el.classList.remove('show'), 2800); };
-  const headers = (json = false) => ({ ...(json ? {'content-type':'application/json'} : {}), ...(token ? { authorization:`Bearer ${token}` } : {}) });
+  const headers = (json = false) => ({ ...(json ? {'content-type':'application/json'} : {}), ...(getToken() ? { authorization:`Bearer ${getToken()}` } : {}) });
   const request = async (path, options = {}) => { const response = await fetch(`${API}${path}`, { ...options, headers:{ ...headers(Boolean(options.body)), ...(options.headers || {}) } }); if (!response.ok) throw new Error(`API ${response.status}`); return response; };
   const local = () => { try { return JSON.parse(localStorage.getItem('cpm-last-project') || 'null'); } catch { return null; } };
   const brief = () => ({ name:value('gen-name'), sector:value('gen-sector'), country:value('gen-country') || 'FR', city:value('gen-city'), plan:value('gen-plan') || 'pro', language:value('gen-language') || 'fr', languages:[...document.querySelectorAll('#language-checks input:checked')].map((input) => input.value), description:value('gen-description') });

@@ -1,0 +1,2 @@
+/* Project action buttons */
+.saved-project-actions{flex-wrap:wrap}.saved-project-actions .secondary-btn{background:#fff;color:var(--green);border:1px solid #cad9cc;border-radius:8px;cursor:pointer}.saved-project-actions .secondary-btn:hover{background:#f0f6ef}

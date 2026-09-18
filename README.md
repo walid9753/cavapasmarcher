@@ -19,10 +19,24 @@ Puis ouvrir `http://localhost:8080`.
 
 Les données hors ligne peuvent être exportées depuis le contrôle **Sauvegarde gratuite** et importées sur un autre navigateur. Aucun compte cloud, fournisseur IA ou paiement n’est nécessaire pour utiliser le prototype local.
 
+## Vérification automatique
+
+`npm test` exécute maintenant :
+
+1. le smoke test API et authentification ;
+2. l’audit statique des fichiers référencés dans `index.html` ;
+3. la vérification de syntaxe de tous les fichiers JavaScript.
+
+Tu peux lancer uniquement l’audit avec :
+
+```bash
+npm run audit
+```
+
 ## Ce qui est volontairement reporté à la fin
 
 Stripe/PayPal, fournisseurs IA externes, email, déploiement cloud, domaines personnalisés, base distante, monitoring et comptes OAuth. Ces intégrations sont facultatives et nécessitent des comptes ou des secrets qui ne doivent pas être ajoutés au dépôt.
 
 ## Vérification honnête
 
-Le smoke test couvre l’API et l’authentification. Il faut encore exécuter `npm test` et vérifier les parcours dans un navigateur réel avant d’affirmer qu’il n’y a aucune erreur dans l’environnement cible.
+L’audit automatique ne remplace pas un test navigateur réel. Il vérifie les fichiers et la syntaxe, mais il faut encore tester les clics, le rendu responsive et les formulaires dans le navigateur cible.

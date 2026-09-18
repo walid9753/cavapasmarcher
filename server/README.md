@@ -1,6 +1,6 @@
-# Production foundation
+# CavaPasMarcher API
 
-This folder contains the first backend boundary for the studio. It is intentionally dependency-free so it can run on Node 20 without exposing API keys in the browser.
+The API is intentionally dependency-free and now provides a safer persistence foundation for the generator.
 
 ## Run
 
@@ -8,18 +8,26 @@ This folder contains the first backend boundary for the studio. It is intentiona
 npm start
 ```
 
-The API listens on `http://localhost:8787`.
+The default server is `http://localhost:8787`. Set `PORT`, `CPM_DATA_FILE`, and optionally `CPM_ALLOWED_ORIGIN` in the environment.
 
 ## Endpoints
 
 - `GET /api/health`
-- `GET /api/countries`
 - `GET /api/pricing?country=FR&sector=restaurant&plan=pro`
 - `GET /api/projects`
-- `POST /api/projects` with a JSON project payload
+- `POST /api/projects`
 - `GET /api/projects/:id`
+- `PUT /api/projects/:id` — update a brief and recalculate local pricing
 - `DELETE /api/projects/:id`
+- `PUT /api/projects/:id/site` with `{ "html": "..." }` — persist a generated artifact
+- `GET /api/projects/:id/site` — retrieve the saved artifact
 
-## Important
+## Production notes
 
-The current store is a local JSON file for development. Before production, replace it with PostgreSQL/Supabase, add authentication and tenant isolation, validate payment/tax rules per country, and put the API behind HTTPS and a rate limiter.
+The API validates project payloads, limits request bodies to 2 MB, adds security headers, handles CORS through `CPM_ALLOWED_ORIGIN`, applies a small in-memory rate limit, and never exposes stack traces. The JSON file is suitable for local development; use a real database and authentication before exposing this service publicly.
+
+Run the dependency-free smoke tests with:
+
+```bash
+npm test
+```

@@ -7,15 +7,88 @@ import { fileURLToPath } from 'node:url';
 const root = dirname(fileURLToPath(import.meta.url));
 const dataFile = process.env.CPM_DATA_FILE || join(root, 'data', 'projects.json');
 const port = Number(process.env.PORT || 8787);
+const maxBodyBytes = 2 * 1024 * 1024;
 const allowedPlans = new Set(['basic', 'pro', 'ultimate']);
-const allowedCountries = new Set(['AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT','AZ','BS','BH','BD','BB','BY','BE','BZ','BJ','BT','BO','BA','BW','BR','BN','BG','BF','BI','CV','KH','CM','CA','CF','TD','CL','CN','CO','KM','CG','CD','CR','CI','HR','CU','CY','CZ','DK','DJ','DM','DO','EC','EG','SV','GQ','ER','EE','SZ','ET','FJ','FI','FR','GA','GM','GE','DE','GH','GR','GD','GT','GN','GW','GY','HT','HN','HU','IS','IN','ID','IR','IQ','IE','IL','IT','JM','JP','JO','KZ','KE','KI','KP','KR','KW','KG','LA','LV','LB','LS','LR','LY','LI','LT','LU','MG','MW','MY','MV','ML','MT','MH','MR','MU','MX','FM','MD','MC','MN','ME','MA','MZ','MM','NA','NR','NP','NL','NZ','NI','NE','NG','MK','NO','OM','PK','PW','PA','PG','PY','PE','PH','PL','PT','QA','RO','RU','RW','KN','LC','VC','WS','SM','ST','SA','SN','RS','SC','SL','SG','SK','SI','SB','SO','ZA','SS','ES','LK','SD','SR','SE','CH','SY','TW','TJ','TZ','TH','TL','TG','TO','TT','TN','TR','TM','TV','UG','UA','AE','GB','US','UY','UZ','VU','VA','VE','VN','YE','ZM','ZW']);
-const currency = { FR:'EUR',MA:'MAD',BE:'EUR',CH:'CHF',CA:'CAD',US:'USD',GB:'GBP',DZ:'DZD',TN:'TND',SN:'XOF',CI:'XOF',CM:'XAF',BR:'BRL',MX:'MXN',AR:'ARS',CL:'CLP',CO:'COP',AU:'AUD',JP:'JPY',CN:'CNY',IN:'INR',KR:'KRW',AE:'AED',SA:'SAR',TR:'TRY',ZA:'ZAR',NG:'NGN',KE:'KES',GH:'GHS',EG:'EGP',RU:'RUB',UA:'UAH',PL:'PLN',SE:'SEK',NO:'NOK',DK:'DKK',RO:'RON',CZ:'CZK',HU:'HUF',IL:'ILS',NZ:'NZD' };
-const factor = { EUR:1, CHF:1.12, GBP:1.02, CAD:.76, USD:.94, MAD:.34, DZD:.13, TND:.28, XOF:.22, XAF:.22, BRL:.29, MXN:.25, ARS:.16, CLP:.22, COP:.18, AUD:.82, JPY:.88, CNY:.34, INR:.21, KRW:.8, AED:.87, SAR:.78, TRY:.22, ZAR:.28, NGN:.12, KES:.2, GHS:.2, EGP:.17, RUB:.3, UAH:.18, PLN:.46, SEK:.72, NOK:.82, DKK:.73, RON:.36, CZK:.43, HUF:.29, ILS:.86, NZD:.75 };
-const base = { basic: [2900,149], pro: [6900,290], ultimate: [18900,690] };
-async function loadProjects() { try { return JSON.parse(await readFile(dataFile, 'utf8')); } catch { return []; } }
-async function saveProjects(projects) { await mkdir(dirname(dataFile), { recursive: true }); await writeFile(dataFile, JSON.stringify(projects, null, 2)); }
-function json(res, status, body) { const headers = { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store', 'access-control-allow-origin':'*', 'x-content-type-options':'nosniff' }; res.writeHead(status, headers); if (status !== 204) res.end(JSON.stringify(body)); else res.end(); }
-function pricing(country, sector, plan) { const code = String(country || 'FR').toUpperCase(); const selected = allowedCountries.has(code) ? code : 'FR'; const curr = currency[selected] || 'USD'; const niche = /sant|méd|med|jurid|avocat|finance|imm|hôtel|hotel/i.test(String(sector || '')) ? 1.18 : /restaurant|artisan|coiff|sport|local/i.test(String(sector || '')) ? .88 : 1; const [oneTime, monthly] = base[plan] || base.pro; return { country:selected, currency:curr, plan:allowedPlans.has(plan) ? plan : 'pro', oneTime:Math.round(oneTime*(factor[curr]||.5)*niche), monthly:Math.round(monthly*(factor[curr]||.5)*niche), pricingVersion:'2026-01' }; }
-function validProject(body) { if (!body || typeof body !== 'object') return 'Invalid JSON object'; if (!String(body.name || '').trim() || !String(body.sector || '').trim()) return 'name and sector are required'; if (String(body.name).length > 140 || String(body.description || '').length > 4000) return 'field length exceeded'; if (body.plan && !allowedPlans.has(body.plan)) return 'invalid plan'; if (body.country && !allowedCountries.has(String(body.country).toUpperCase())) return 'invalid country'; return null; }
-async function handler(req,res) { const url = new URL(req.url, `http://${req.headers.host||'localhost'}`); if(req.method==='OPTIONS'){res.writeHead(204,{'access-control-allow-origin':'*','access-control-allow-methods':'GET,POST,DELETE,OPTIONS','access-control-allow-headers':'content-type'});return res.end();} if(url.pathname==='/api/health')return json(res,200,{ok:true,service:'cpm-studio-api'}); if(url.pathname==='/api/countries'&&req.method==='GET')return json(res,200,{countries:[...allowedCountries].map(code=>({code,currency:currency[code]||'USD'}))}); if(url.pathname==='/api/pricing'&&req.method==='GET')return json(res,200,pricing(url.searchParams.get('country'),url.searchParams.get('sector'),url.searchParams.get('plan'))); if(url.pathname==='/api/projects'&&req.method==='GET')return json(res,200,{projects:await loadProjects()}); if(url.pathname==='/api/projects'&&req.method==='POST'){let body='';for await(const chunk of req){body+=chunk;if(body.length>100000)return json(res,413,{error:'payload too large'});}let data;try{data=JSON.parse(body)}catch{return json(res,400,{error:'invalid JSON'})}const error=validProject(data);if(error)return json(res,422,{error});const projects=await loadProjects();const project={id:randomUUID(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),name:String(data.name).trim(),sector:String(data.sector).trim(),country:String(data.country||'FR').toUpperCase(),city:String(data.city||'').trim(),plan:data.plan||'pro',language:data.language||'fr',languages:Array.isArray(data.languages)?data.languages.slice(0,12):[],description:String(data.description||'').trim(),pricing:pricing(data.country,data.sector,data.plan||'pro')};projects.unshift(project);await saveProjects(projects);return json(res,201,project);} const match=url.pathname.match(/^\/api\/projects\/([^/]+)$/);if(match&&req.method==='GET'){const project=(await loadProjects()).find(x=>x.id===match[1]);return project?json(res,200,project):json(res,404,{error:'project not found'});}if(match&&req.method==='DELETE'){const projects=await loadProjects();const next=projects.filter(x=>x.id!==match[1]);if(next.length===projects.length)return json(res,404,{error:'project not found'});await saveProjects(next);return json(res,204,null);}return json(res,404,{error:'route not found'});}
-http.createServer((req,res)=>handler(req,res).catch(error=>json(res,500,{error:'internal server error',detail:process.env.NODE_ENV==='development'?error.message:undefined}))).listen(port,()=>console.log(`CPM API listening on http://localhost:${port}`));
+const defaultOrigin = process.env.CPM_ALLOWED_ORIGIN || '*';
+const currencyByCountry = {
+  FR: 'EUR', BE: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', PT: 'EUR', NL: 'EUR', AT: 'EUR', IE: 'EUR', FI: 'EUR', GR: 'EUR', LU: 'EUR',
+  MA: 'MAD', DZ: 'DZD', TN: 'TND', EG: 'EGP', SN: 'XOF', CI: 'XOF', CM: 'XAF', NG: 'NGN', GH: 'GHS', KE: 'KES', ZA: 'ZAR',
+  CH: 'CHF', GB: 'GBP', US: 'USD', CA: 'CAD', AU: 'AUD', NZ: 'NZD', JP: 'JPY', CN: 'CNY', IN: 'INR', KR: 'KRW',
+  BR: 'BRL', MX: 'MXN', AR: 'ARS', CL: 'CLP', CO: 'COP', AE: 'AED', SA: 'SAR', TR: 'TRY', IL: 'ILS', SG: 'SGD'
+};
+const factors = { EUR: 1, CHF: 1.12, GBP: 1.02, USD: .94, CAD: .76, AUD: .82, NZD: .86, MAD: .34, DZD: .13, TND: .28, EGP: .18, XOF: .22, XAF: .22, NGN: .0011, GHS: .06, KES: .006, ZAR: .05, JPY: .88, CNY: .34, INR: .21, KRW: .0008, BRL: .29, MXN: .25, ARS: .16, CLP: .22, COP: .18, AED: .26, SAR: .25, TRY: .03, ILS: .25, SGD: .70 };
+const base = { basic: [2900, 149], pro: [6900, 290], ultimate: [18900, 690] };
+const memoryRate = new Map();
+
+async function loadProjects() {
+  try {
+    const parsed = JSON.parse(await readFile(dataFile, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+async function saveProjects(projects) {
+  await mkdir(dirname(dataFile), { recursive: true });
+  await writeFile(dataFile, JSON.stringify(projects, null, 2));
+}
+function headers() {
+  return { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'access-control-allow-origin': defaultOrigin, 'access-control-allow-methods': 'GET,POST,PUT,DELETE,OPTIONS', 'access-control-allow-headers': 'content-type', 'x-content-type-options': 'nosniff' };
+}
+function json(res, status, body) { res.writeHead(status, headers()); if (status !== 204) res.end(JSON.stringify(body)); else res.end(); }
+function pricing(country = 'FR', sector = '', plan = 'basic') {
+  const code = String(country).toUpperCase().slice(0, 2);
+  const currency = currencyByCountry[code] || 'USD';
+  const multiplier = 1 + Math.min(String(sector).length, 24) / 240;
+  const values = base[plan] || base.basic;
+  return { country: code, sector: String(sector || 'general'), plan, currency, setup: Math.round(values[0] * (factors[currency] || 1) * multiplier), monthly: Math.round(values[1] * (factors[currency] || 1) * multiplier) };
+}
+function validateProject(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return 'Invalid JSON object';
+  if (!String(body.name || '').trim()) return 'name is required';
+  if (!String(body.sector || '').trim()) return 'sector is required';
+  if (body.plan && !allowedPlans.has(String(body.plan).toLowerCase())) return 'plan must be basic, pro or ultimate';
+  if (body.country && !/^[A-Za-z]{2}$/.test(String(body.country))) return 'country must be an ISO 3166-1 alpha-2 code';
+  return null;
+}
+async function readBody(req) {
+  let size = 0; const chunks = [];
+  for await (const chunk of req) { size += chunk.length; if (size > maxBodyBytes) throw Object.assign(new Error('payload too large'), { status: 413 }); chunks.push(chunk); }
+  if (!size) return {};
+  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw Object.assign(new Error('invalid JSON'), { status: 400 }); }
+}
+function rateLimited(req) {
+  const key = req.socket.remoteAddress || 'unknown'; const now = Date.now(); const current = memoryRate.get(key);
+  if (!current || now - current.started > 60_000) { memoryRate.set(key, { started: now, count: 1 }); return false; }
+  current.count += 1; return current.count > 120;
+}
+async function handler(req, res) {
+  if (req.method === 'OPTIONS') return json(res, 204);
+  if (rateLimited(req)) return json(res, 429, { error: 'rate limit exceeded' });
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const parts = url.pathname.split('/').filter(Boolean);
+  if (req.method === 'GET' && url.pathname === '/api/health') return json(res, 200, { ok: true, service: 'cavapasmarcher-api', version: '1.0' });
+  if (req.method === 'GET' && url.pathname === '/api/pricing') return json(res, 200, { pricing: pricing(url.searchParams.get('country'), url.searchParams.get('sector'), url.searchParams.get('plan') || 'basic') });
+  if (parts[0] !== 'api' || parts[1] !== 'projects') return json(res, 404, { error: 'route not found' });
+  const projects = await loadProjects();
+  if (req.method === 'GET' && parts.length === 2) return json(res, 200, { projects });
+  if (req.method === 'POST' && parts.length === 2) {
+    const body = await readBody(req); const error = validateProject(body); if (error) return json(res, 400, { error });
+    const now = new Date().toISOString(); const project = { ...body, id: randomUUID(), country: String(body.country || 'FR').toUpperCase(), plan: String(body.plan || 'basic').toLowerCase(), createdAt: now, updatedAt: now, pricing: pricing(body.country, body.sector, String(body.plan || 'basic').toLowerCase()) };
+    projects.unshift(project); await saveProjects(projects); return json(res, 201, project);
+  }
+  const id = parts[2]; const index = projects.findIndex((project) => project.id === id);
+  if (index < 0) return json(res, 404, { error: 'project not found' });
+  if (req.method === 'GET' && parts.length === 3) return json(res, 200, projects[index]);
+  if (req.method === 'DELETE' && parts.length === 3) { projects.splice(index, 1); await saveProjects(projects); return json(res, 204); }
+  if (req.method === 'PUT' && parts.length === 3) {
+    const body = await readBody(req); const error = validateProject(body); if (error) return json(res, 400, { error });
+    projects[index] = { ...projects[index], ...body, id, country: String(body.country || projects[index].country).toUpperCase(), plan: String(body.plan || projects[index].plan).toLowerCase(), updatedAt: new Date().toISOString(), pricing: pricing(body.country || projects[index].country, body.sector || projects[index].sector, String(body.plan || projects[index].plan).toLowerCase()) };
+    await saveProjects(projects); return json(res, 200, projects[index]);
+  }
+  if (parts[3] === 'site' && req.method === 'PUT') {
+    const body = await readBody(req); if (typeof body.html !== 'string' || body.html.length > maxBodyBytes) return json(res, 400, { error: 'html must be a string under 2 MB' });
+    projects[index].site = { html: body.html, updatedAt: new Date().toISOString() }; projects[index].updatedAt = projects[index].site.updatedAt; await saveProjects(projects); return json(res, 200, projects[index].site);
+  }
+  if (parts[3] === 'site' && req.method === 'GET') return json(res, 200, projects[index].site || { html: null });
+  return json(res, 404, { error: 'route not found' });
+}
+http.createServer((req, res) => handler(req, res).catch((error) => json(res, error.status || 500, { error: error.status ? error.message : 'internal server error' }))).listen(port, () => console.log(`CavaPasMarcher API listening on http://localhost:${port}`));

@@ -1,42 +1,24 @@
 # CavaPasMarcher — état réel
 
-## Ce qui fonctionne
+Le projet comprend maintenant : génération premium par niche, pays, langues et forfaits ; pricing localisé ; prévisualisation ; sauvegarde HTML ; versions locales et serveur ; export HTML ; contrôle qualité ; API Node ; comptes avec inscription/connexion ; sessions bearer ; isolation logique des projets par utilisateur ; mode administrateur legacy ; tests API.
 
-- dashboard frontend sans framework ;
-- génération HTML premium localisée par pays, langue, forfait et niche ;
-- pricing Basic / Pro / Ultimate ;
-- prévisualisation responsive ;
-- sauvegarde de projets et d’artefacts HTML ;
-- historique de versions local et serveur ;
-- restauration locale ;
-- export HTML ;
-- contrôle qualité minimal avant livraison ;
-- API Node.js sans dépendance ;
-- authentification Bearer optionnelle par `CPM_AUTH_TOKEN` ;
-- smoke test API.
-
-## Authentification locale
-
-Sans `CPM_AUTH_TOKEN`, l’API fonctionne en développement local. Pour activer la protection :
+## Lancer
 
 ```bash
-CPM_AUTH_TOKEN="un-secret-long-et-aleatoire" npm start
+npm start
+python3 -m http.server 8080
 ```
 
-Le dashboard peut envoyer le token avec :
-
-```html
-<script>window.CPM_API_TOKEN = 'un-secret-long-et-aleatoire';</script>
-```
-
-Ne committez jamais ce token. En production, utilisez un vrai système de comptes, des sessions sécurisées et une base de données multi-tenant.
-
-## Vérification
+## Tester
 
 ```bash
 npm test
 ```
 
-## Ce qui manque encore avant de dire « produit commercial complet »
+## Auth
 
-Cette version est une fondation fonctionnelle, pas un SaaS commercial fini. Il manque encore : PostgreSQL ou autre base durable, authentification utilisateur complète avec inscription/réinitialisation, isolation multi-tenant, stockage d’assets, paiements Stripe/PayPal et webhooks, traduction IA contrôlée, génération d’images sous licence, déploiement automatique, domaines, sauvegardes, logs, monitoring, conformité RGPD, règles fiscales, emails transactionnels et tests navigateur automatisés.
+Créer un compte avec `POST /api/auth/register`, se connecter avec `POST /api/auth/login`, puis envoyer `Authorization: Bearer <token>` sur les routes privées. `CPM_AUTH_TOKEN` reste un mode admin legacy pour usage interne.
+
+## Avant commercialisation
+
+Le cœur fonctionnel est avancé mais ce n’est pas encore un produit commercial totalement prêt : migration PostgreSQL/Redis, cookies HttpOnly, récupération de compte, dashboard de connexion, paiements Stripe/PayPal, webhooks, stockage d’assets, déploiement automatique, domaines, emails, monitoring, backups, RGPD, fiscalité et tests navigateur restent indispensables.

@@ -1,11 +1,14 @@
-# CavaPasMarcher API
+# CavaPasMarcher API — authentification
 
-## Version API
+## Comptes
 
-- `GET /api/projects/:id/versions` — liste les versions sans exposer le HTML lourd.
-- `POST /api/projects/:id/versions` avec `{ html, name, project }` — crée une version, ignore un doublon consécutif et conserve au maximum 30 versions.
-- `GET /api/projects/:id/versions/:versionId` — récupère une version complète avec son HTML.
+- `POST /api/auth/register` avec `{ name, email, password }` (mot de passe de 10 caractères minimum).
+- `POST /api/auth/login` avec `{ email, password }` retourne un bearer token de session valable 7 jours en mémoire.
+- `GET /api/auth/me` retourne l’utilisateur connecté.
+- `POST /api/auth/logout` invalide la session.
 
-Le dashboard enregistre le brief, l’artefact actif et une version serveur après chaque génération. L’historique local reste disponible hors ligne.
+Les projets créés par un compte possèdent un `ownerId` interne et ne sont visibles que par ce compte. Le rôle `admin` peut voir tous les projets. Le mode `CPM_AUTH_TOKEN` historique reste disponible pour le développement interne et agit comme administrateur legacy.
 
-Avant une mise en production, remplacer le JSON par PostgreSQL ou un stockage durable, ajouter l’authentification et associer chaque projet à un compte utilisateur.
+## Limite actuelle
+
+Les sessions sont en mémoire et les comptes sont stockés dans un fichier JSON : cette étape fournit une vraie séparation logique pour le prototype, mais il faut migrer vers PostgreSQL/Redis, des cookies HttpOnly ou un fournisseur d’identité avant une exposition publique.

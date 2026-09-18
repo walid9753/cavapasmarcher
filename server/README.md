@@ -1,14 +1,6 @@
 # CavaPasMarcher API
 
-The API is intentionally dependency-free and now provides a safer persistence foundation for the generator.
-
-## Run
-
-```bash
-npm start
-```
-
-The default server is `http://localhost:8787`. Set `PORT`, `CPM_DATA_FILE`, and optionally `CPM_ALLOWED_ORIGIN` in the environment.
+API locale sans dépendance pour les projets et leurs sites générés.
 
 ## Endpoints
 
@@ -17,17 +9,15 @@ The default server is `http://localhost:8787`. Set `PORT`, `CPM_DATA_FILE`, and 
 - `GET /api/projects`
 - `POST /api/projects`
 - `GET /api/projects/:id`
-- `PUT /api/projects/:id` — update a brief and recalculate local pricing
+- `PUT /api/projects/:id`
 - `DELETE /api/projects/:id`
-- `PUT /api/projects/:id/site` with `{ "html": "..." }` — persist a generated artifact
-- `GET /api/projects/:id/site` — retrieve the saved artifact
+- `PUT /api/projects/:id/site` avec `{ "html": "..." }`
+- `GET /api/projects/:id/site`
 
-## Production notes
+Le frontend réutilise l’identifiant du dernier projet : une nouvelle génération met donc à jour le projet existant au lieu de créer systématiquement des doublons. L’artefact HTML affiché dans l’iframe de prévisualisation est sauvegardé après le brief.
 
-The API validates project payloads, limits request bodies to 2 MB, adds security headers, handles CORS through `CPM_ALLOWED_ORIGIN`, applies a small in-memory rate limit, and never exposes stack traces. The JSON file is suitable for local development; use a real database and authentication before exposing this service publicly.
+## Sécurité actuelle
 
-Run the dependency-free smoke tests with:
+Les payloads sont validés, limités à 2 Mo, les réponses ont des en-têtes de sécurité, CORS peut être limité par `CPM_ALLOWED_ORIGIN`, une limitation mémoire simple est active et les détails de stack ne sont jamais exposés par défaut.
 
-```bash
-npm test
-```
+Avant une mise en ligne : remplacer le fichier JSON par PostgreSQL, ajouter authentification/autorisation et utiliser un stockage d’artefacts dédié.

@@ -1,38 +1,35 @@
 # CavaPasMarcher
 
-## Run the complete local MVP
+## État actuel
 
-Terminal 1 — API and project persistence:
+Le dépôt contient un studio frontend de génération de sites et une API Node.js sans dépendance externe. Le flux actuel permet de créer un brief, calculer un prix localisé, générer une prévisualisation, sauvegarder le projet, le rouvrir, le dupliquer et exporter son brief.
+
+La dernière étape ajoute la persistance de l’artefact HTML généré : après une génération réussie, le brief est créé ou mis à jour et le HTML de la prévisualisation est enregistré dans le même projet. Cela évite de perdre le site quand on recharge le dashboard.
+
+## Lancer localement
+
+Terminal 1 — API :
 
 ```bash
 npm start
 ```
 
-Terminal 2 — static dashboard (from the repository root):
+Terminal 2 — dashboard statique :
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Open `http://localhost:8080`. The generator continues to work if the API is offline, and automatically persists the generated brief to `localStorage`. When the API is running, every generated project is saved in `server/data/projects.json`.
+Ouvrir `http://localhost:8080`.
 
-## Verify the API
+## Vérifier
 
 ```bash
 npm test
 ```
 
-The smoke test starts an isolated temporary API store, checks health, creation, listing, pricing and deletion, then removes the temporary data.
+Le smoke test utilise un fichier temporaire et couvre la santé de l’API, la création, la mise à jour, la tarification, la sauvegarde/récupération de l’artefact et la suppression.
 
-## Current production boundary
+## Limites importantes avant production
 
-- `generator.js`: niche, plan, country and language-aware HTML generation.
-- `countries.js`: country/currency/language catalog used by the browser.
-- `api-client.js`: saves generated projects through the API with an offline fallback.
-- `sites-manager.js`: lists, refreshes and deletes projects.
-- `project-editor.js`: opens a saved project and pre-fills its complete brief.
-- `project-actions.js`: duplicates projects and exports JSON briefs.
-- `server/index.js`: validated project persistence and price calculation.
-- `server/smoke-test.js`: dependency-free API smoke test.
-
-Before public launch, add authentication, tenant isolation, a database, HTTPS, rate limiting, an exchange-rate provider, tax rules, payment webhooks, translation quality checks, generated asset storage and automated browser tests.
+Cette base n’est pas encore un SaaS public : il manque l’authentification, l’isolation entre comptes, une vraie base de données, HTTPS, un fournisseur de paiement, les webhooks, les règles fiscales et la validation de contenu généré. Le fichier JSON est uniquement adapté au développement local ou à une démonstration contrôlée.

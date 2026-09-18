@@ -1,35 +1,35 @@
-# CavaPasMarcher
+# CavaPasMarcher — état du projet
 
-## État actuel
+Le studio dispose maintenant d’un flux complet de génération locale : brief métier, pays/langue, forfait, pricing localisé, résolution de niche, rendu HTML premium, prévisualisation, sauvegarde API et export HTML.
 
-Le dépôt contient un studio frontend de génération de sites et une API Node.js sans dépendance externe. Le flux actuel permet de créer un brief, calculer un prix localisé, générer une prévisualisation, sauvegarder le projet, le rouvrir, le dupliquer et exporter son brief.
-
-La dernière étape ajoute la persistance de l’artefact HTML généré : après une génération réussie, le brief est créé ou mis à jour et le HTML de la prévisualisation est enregistré dans le même projet. Cela évite de perdre le site quand on recharge le dashboard.
-
-## Lancer localement
-
-Terminal 1 — API :
+## Utilisation
 
 ```bash
 npm start
-```
-
-Terminal 2 — dashboard statique :
-
-```bash
 python3 -m http.server 8080
 ```
 
-Ouvrir `http://localhost:8080`.
+Ouvrir `http://localhost:8080`, cliquer sur **Nouveau site**, remplir le brief puis générer. Après génération, les actions permettent de télécharger le HTML autonome ou de l’ouvrir dans un nouvel onglet.
 
-## Vérifier
+## Architecture active
+
+- `data/plans.js` : Basic, Pro et Ultimate.
+- `data/niches.js` : univers métier et résolution automatique.
+- `services/pricing.js` : pricing localisé côté navigateur.
+- `services/site-builder.js` : constructeur HTML premium.
+- `premium-generator.js` : branchement du constructeur à l’interface.
+- `api-client.js` : persistance du brief et de l’artefact HTML.
+- `site-export.js` : export et ouverture du site produit.
+- `server/index.js` : API locale de projets et artefacts.
+
+## Vérification
 
 ```bash
 npm test
 ```
 
-Le smoke test utilise un fichier temporaire et couvre la santé de l’API, la création, la mise à jour, la tarification, la sauvegarde/récupération de l’artefact et la suppression.
+Le test couvre la création, la modification, le pricing, la sauvegarde/récupération d’un artefact et la suppression d’un projet.
 
-## Limites importantes avant production
+## Limites avant lancement commercial
 
-Cette base n’est pas encore un SaaS public : il manque l’authentification, l’isolation entre comptes, une vraie base de données, HTTPS, un fournisseur de paiement, les webhooks, les règles fiscales et la validation de contenu généré. Le fichier JSON est uniquement adapté au développement local ou à une démonstration contrôlée.
+Le projet est une fondation fonctionnelle, pas encore un SaaS public : authentification, isolation multi-tenant, PostgreSQL, stockage d’assets, paiement, webhooks, traduction IA, déploiement et monitoring restent à intégrer avant toute exposition publique.

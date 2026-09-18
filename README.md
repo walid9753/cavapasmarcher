@@ -1,24 +1,26 @@
-# CavaPasMarcher — AI Web Agency MVP
+# CavaPasMarcher
 
-Prototype frontend for an automated web agency: prospect discovery, lead scoring, quote generation, and a custom site preview.
+## Run the complete local MVP
 
-## Run locally
+Terminal 1 — API and project persistence:
 
-No build step is required. Open `index.html` in a browser, or serve the folder with any static server:
+```bash
+npm start
+```
+
+Terminal 2 — static dashboard (from the repository root):
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Then visit http://localhost:8080.
+Open `http://localhost:8080`. The generator continues to work if the API is offline, and automatically persists the generated brief to `localStorage`. When the API is running, every generated project is saved in `server/data/projects.json`.
 
-## Included
+## Current production boundary
 
-- Dashboard with revenue and pipeline metrics
-- Prospect list with automatic 0–100 opportunity scoring
-- Prospect detail view with audit signals
-- Quote generator with three packages
-- Site brief generator and live website preview
-- French UI and local demo data
+- `generator.js`: niche, plan, country and language-aware HTML generation.
+- `countries.js`: country/currency/language catalog used by the browser.
+- `api-client.js`: saves generated projects through the API with an offline fallback.
+- `server/index.js`: validated project persistence and price calculation.
 
-This is a frontend MVP. Production integrations (real business data providers, authentication, AI API, payments, CRM, and deployment) should be added behind a backend API. Never expose provider API keys in browser code.
+Before public launch, add authentication, tenant isolation, a database, HTTPS, rate limiting, an exchange-rate provider, tax rules, payment webhooks, translation quality checks, generated asset storage and automated browser tests.

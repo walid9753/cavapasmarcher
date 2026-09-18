@@ -21,6 +21,8 @@ Open `http://localhost:8080`. The generator continues to work if the API is offl
 - `generator.js`: niche, plan, country and language-aware HTML generation.
 - `countries.js`: country/currency/language catalog used by the browser.
 - `api-client.js`: saves generated projects through the API with an offline fallback.
+- `sites-manager.js`: lists, refreshes and deletes projects.
+- `project-editor.js`: opens a saved project and pre-fills its complete brief.
 - `server/index.js`: validated project persistence and price calculation.
 
 Before public launch, add authentication, tenant isolation, a database, HTTPS, rate limiting, an exchange-rate provider, tax rules, payment webhooks, translation quality checks, generated asset storage and automated browser tests.

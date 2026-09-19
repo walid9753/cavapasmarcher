@@ -1,42 +1,41 @@
 # CavaPasMarcher — état actuel
 
-Le projet fonctionne comme un studio local gratuit : génération de sites HTML, pricing localisé, aperçu, contrôle qualité, export, versions, comptes locaux, API Node et isolation logique des projets.
+## Déjà présent
 
-## Utilisation gratuite
+- studio frontend sans framework ;
+- génération HTML premium par niche, pays, langue et forfait ;
+- pricing localisé ;
+- prévisualisation responsive ;
+- export HTML et export JSON du brief ;
+- contrôle qualité minimal ;
+- versions locales et serveur ;
+- API Node.js sans dépendances ;
+- comptes locaux avec mot de passe haché ;
+- sessions temporaires et isolation logique des projets ;
+- sauvegarde/restauration locale gratuite ;
+- galerie, recherche, ouverture et suppression de projets ;
+- audit statique des assets et de la syntaxe JavaScript.
+
+## Utilisation sans dépense
 
 ```bash
+git pull
 npm test
 npm start
 ```
 
-Dans un autre terminal :
+Dans un second terminal :
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Puis ouvrir `http://localhost:8080`.
+Puis ouvre `http://localhost:8080`.
 
-Les données hors ligne peuvent être exportées depuis le contrôle **Sauvegarde gratuite** et importées sur un autre navigateur. Aucun compte cloud, fournisseur IA ou paiement n’est nécessaire pour utiliser le prototype local.
+## Reste à tester
 
-## Vérification automatique
+Le code n’est pas déclaré sans bug avant exécution locale. Le contrôle navigateur doit couvrir inscription, connexion, génération, sauvegarde, galerie, recherche, ouverture, suppression, export et restauration.
 
-`npm test` exécute maintenant :
+## Reporté à la fin
 
-1. le smoke test API et authentification ;
-2. l’audit statique des fichiers référencés dans `index.html` ;
-3. la vérification de syntaxe de tous les fichiers JavaScript.
-
-Tu peux lancer uniquement l’audit avec :
-
-```bash
-npm run audit
-```
-
-## Ce qui est volontairement reporté à la fin
-
-Stripe/PayPal, fournisseurs IA externes, email, déploiement cloud, domaines personnalisés, base distante, monitoring et comptes OAuth. Ces intégrations sont facultatives et nécessitent des comptes ou des secrets qui ne doivent pas être ajoutés au dépôt.
-
-## Vérification honnête
-
-L’audit automatique ne remplace pas un test navigateur réel. Il vérifie les fichiers et la syntaxe, mais il faut encore tester les clics, le rendu responsive et les formulaires dans le navigateur cible.
+Les services externes restent facultatifs : paiements, fournisseur IA, email, OAuth, base distante, stockage cloud, domaines, déploiement, monitoring et backups serveur.

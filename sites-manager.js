@@ -1,119 +1,97 @@
-/* Saved projects workspace with authenticated API requests and offline fallback. */
+/* Project list and free local project management. */
 (function () {
   if (window.CPMProjectGallery) {
-    window.CPMSavedProjects = window.CPMProjectGallery;
+    window.CPMProjectList = window.CPMProjectGallery;
     return;
   }
 
   const API = window.CPM_API_URL || 'http://localhost:8787/api';
-  const app = () => document.getElementById('app');
   const token = () => window.CPMAuth?.token?.() || window.CPM_API_TOKEN || localStorage.getItem('cpm-session-token') || '';
   const headers = () => ({ ...(token() ? { authorization: `Bearer ${token()}` } : {}) });
-  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
-  const listLocalProjects = () => {
-    const out = new Map();
-    const keys = ['cpm-projects', 'cpm-last-project'];
-    for (const key of keys) {
-      try {
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-        const parsed = JSON.parse(raw);
-        const items = Array.isArray(parsed) ? parsed : [parsed];
-        for (const item of items) {
-          if (!item || typeof item !== 'object') continue;
-          const projectId = String(item.id || `local-${Math.random().toString(16).slice(2)}`);
-          out.set(projectId, { ...item, id: projectId, name: item.name || 'Projet sans titre' });
-        }
-      } catch {
-        // Ignore malformed local data and keep the gallery resilient.
-      }
+  const readStoredProjects = () => {
+    try {
+      const raw = localStorage.getItem('cpm-projects');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
-    return [...out.values()];
   };
 
+  function getLocalProject() {
+    try {
+      const last = JSON.parse(localStorage.getItem('cpm-last-project') || 'null');
+      if (last) return last;
+    } catch { /* noop */ }
+    return readStoredProjects()[0] || null;
+  }
+
   async function fetchProjects() {
-    const local = listLocalProjects();
+    const fallback = getLocalProject() ? [getLocalProject()] : readStoredProjects();
     try {
       const response = await fetch(`${API}/projects`, { headers: headers() });
-      if (!response.ok) return local;
+      if (!response.ok) return fallback;
       const data = await response.json().catch(() => ({ projects: [] }));
       const remote = Array.isArray(data.projects) ? data.projects : [];
-      const merged = [...local, ...remote].map((project) => ({
-        ...project,
-        id: project.id || `local-${Math.random().toString(16).slice(2)}`,
-        name: project.name || 'Projet sans titre',
-        pricing: project.pricing || {},
-        sector: project.sector || 'Non renseigné',
-        country: project.country || 'FR',
-        plan: project.plan || 'pro'
-      }));
-      const unique = new Map();
-      for (const project of merged) unique.set(String(project.id), project);
-      return [...unique.values()];
+      const merged = [...fallback, ...remote];
+      const deduped = new Map();
+      for (const project of merged) if (project?.id) deduped.set(String(project.id), project);
+      return [...deduped.values()];
     } catch {
-      return local;
+      return fallback;
     }
   }
 
-  function card(project) {
-    const pricing = project.pricing || {};
-    const currency = pricing.currency || 'EUR';
-    const amount = Number(pricing.total || project.price || 0);
-    return `
-      <article class="saved-project card" data-project-id="${esc(project.id || 'local')}">
-        <div class="saved-project-cover">
-          <span>${esc(project.sector || 'Site')}</span>
-        </div>
+  function renderCards(projects) {
+    if (!projects.length) return '<div class="project-list-empty">Aucun projet enregistré pour le moment.</div>';
+    return projects.map((project) => `
+      <article class="saved-project card" data-project-id="${String(project.id || 'local')}">
+        <div class="saved-project-cover"><span>${String(project.sector || 'Site')}</span></div>
         <div class="saved-project-body">
-          <div class="saved-project-meta">${esc(project.country || 'FR')} · ${esc(project.plan || 'pro')}</div>
-          <h3>${esc(project.name || 'Projet sans titre')}</h3>
-          <p>${esc(project.description || 'Projet enregistré dans le studio local.')}</p>
+          <div class="saved-project-meta">${String(project.country || 'FR')} · ${String(project.plan || 'pro')}</div>
+          <h3>${String(project.name || 'Projet sans titre')}</h3>
+          <p>${String(project.description || 'Projet enregistré dans le studio local.')}</p>
           <div class="saved-project-footer">
-            <strong>${new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)}</strong>
-            <div class="saved-project-actions" data-project-id="${esc(project.id || 'local')}">
-              <button type="button" class="button secondary" data-project-open="${esc(project.id || 'local')}">Ouvrir</button>
-              <button type="button" class="button secondary" data-project-duplicate="${esc(project.id || 'local')}">Dupliquer</button>
+            <strong>${String(project.price || project.pricing?.total || 0)} €</strong>
+            <div class="saved-project-actions" data-project-id="${String(project.id || 'local')}">
+              <button type="button" class="button secondary" data-project-open="${String(project.id || 'local')}">Ouvrir</button>
+              <button type="button" class="button secondary" data-project-duplicate="${String(project.id || 'local')}">Dupliquer</button>
             </div>
           </div>
         </div>
       </article>
-    `;
+    `).join('');
   }
 
-  async function renderSavedProjects() {
-    const root = app();
+  async function refresh() {
+    const root = document.getElementById('project-list-root');
     if (!root) return;
-    const projects = await fetchProjects();
-    const items = projects.length
-      ? projects.map((project) => card(project)).join('')
-      : '<div class="project-list-empty">Aucun projet enregistré pour le moment.</div>';
-
-    root.innerHTML = `
-      <div class="page saved-projects-page">
-        <div class="headline">
-          <div>
-            <div class="eyebrow">PRODUCTION</div>
-            <h1 class="page-title">Sites enregistrés</h1>
-            <p class="page-subtitle">Suivez vos projets, ouvrez-les, dupliquez-les et exportez leurs briefs.</p>
-          </div>
-          <button type="button" class="button primary" data-action="new-site">+ Nouveau site</button>
-        </div>
-        <div class="project-list-grid">${items}</div>
-      </div>
-    `;
+    const query = (document.getElementById('project-search')?.value || '').trim().toLowerCase();
+    const projects = (await fetchProjects()).filter((project) => {
+      if (!query) return true;
+      const terms = [project.name, project.sector, project.country, project.plan].filter(Boolean).join(' ').toLowerCase();
+      return terms.includes(query);
+    });
+    root.innerHTML = renderCards(projects);
   }
 
-  function bindProjects() {
-    const createButton = document.querySelector('[data-action="new-site"]');
-    if (createButton) createButton.addEventListener('click', () => document.querySelector('[data-page="overview"]')?.click());
+  function ensureNode() {
+    const appElement = document.getElementById('app');
+    if (!appElement || document.getElementById('project-list-root')) return;
+    const panel = document.createElement('div');
+    panel.id = 'project-list-root';
+    panel.className = 'project-list-root';
+    appElement.appendChild(panel);
   }
 
-  function handleProjectActions(event) {
-    if (event.target.closest('[data-page="sites"]')) {
+  document.addEventListener('click', async (event) => {
+    const loadButton = event.target.closest('[data-project-load]');
+    if (loadButton) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      renderSavedProjects();
+      await refresh();
       return;
     }
 
@@ -131,13 +109,9 @@
       event.stopImmediatePropagation();
       window.CPMProjectActions?.duplicate?.(duplicateButton.dataset.projectDuplicate);
     }
-  }
+  });
 
-  document.addEventListener('click', handleProjectActions);
-  window.addEventListener('cpm:auth-changed', renderSavedProjects);
-  window.addEventListener('cpm:projects-changed', renderSavedProjects);
-
-  bindProjects();
-  window.CPMProjectGallery = { render: renderSavedProjects, fetchProjects, listLocalProjects };
-  window.CPMSavedProjects = window.CPMProjectGallery;
+  ensureNode();
+  refresh();
+  window.CPMProjectList = { render: refresh, fetchProjects, readStoredProjects };
 })();

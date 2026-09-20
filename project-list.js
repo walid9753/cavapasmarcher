@@ -1,107 +1,97 @@
-/* Project list and free local project management. */
+/* CavaPasMarcher — API bridge with dynamic bearer authentication. */
 (function () {
-  if (window.CPMProjectGallery) {
-    window.CPMProjectList = window.CPMProjectGallery;
-    return;
-  }
-
   const API = window.CPM_API_URL || 'http://localhost:8787/api';
-  const token = () => window.CPMAuth?.token?.() || window.CPM_API_TOKEN || localStorage.getItem('cpm-session-token') || '';
-  const headers = () => ({ ...(token() ? { authorization: `Bearer ${token()}` } : {}) });
+  const $ = (id) => document.getElementById(id);
+  const value = (id) => $(id)?.value?.trim() || '';
+  const getToken = () => window.CPMAuth?.token?.() || window.CPM_API_TOKEN || localStorage.getItem('cpm-session-token') || '';
+  const toast = (message) => {
+    const el = $('toast');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add('show');
+    window.setTimeout(() => el.classList.remove('show'), 2800);
+  };
 
-  function getLocalProject() {
+  const readStoredProjects = () => {
     try {
-      return JSON.parse(localStorage.getItem('cpm-last-project') || 'null');
+      const raw = localStorage.getItem('cpm-projects');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return null;
+      return [];
     }
-  }
+  };
 
-  async function fetchProjects() {
-    const local = getLocalProject();
-    const fallback = local ? [local] : [];
-    try {
-      const response = await fetch(`${API}/projects`, { headers: headers() });
-      if (!response.ok) return fallback;
-      const data = await response.json().catch(() => ({ projects: [] }));
-      const remote = Array.isArray(data.projects) ? data.projects : [];
-      const merged = [...fallback, ...remote];
-      const deduped = new Map();
-      for (const project of merged) if (project?.id) deduped.set(String(project.id), project);
-      return [...deduped.values()];
-    } catch {
-      return fallback;
-    }
-  }
+  const writeStoredProjects = (projects) => {
+    if (!Array.isArray(projects)) return;
+    localStorage.setItem('cpm-projects', JSON.stringify(projects));
+  };
 
-  function renderCards(projects) {
-    if (!projects.length) return '<div class="project-list-empty">Aucun projet enregistré pour le moment.</div>';
-    return projects.map((project) => `
-      <article class="saved-project card" data-project-id="${String(project.id || 'local')}">
-        <div class="saved-project-cover"><span>${String(project.sector || 'Site')}</span></div>
-        <div class="saved-project-body">
-          <div class="saved-project-meta">${String(project.country || 'FR')} · ${String(project.plan || 'pro')}</div>
-          <h3>${String(project.name || 'Projet sans titre')}</h3>
-          <p>${String(project.description || 'Projet enregistré dans le studio local.')}</p>
-          <div class="saved-project-footer">
-            <strong>${String(project.price || project.pricing?.total || 0)} €</strong>
-            <div class="saved-project-actions" data-project-id="${String(project.id || 'local')}">
-              <button type="button" class="button secondary" data-project-open="${String(project.id || 'local')}">Ouvrir</button>
-              <button type="button" class="button secondary" data-project-duplicate="${String(project.id || 'local')}">Dupliquer</button>
-            </div>
-          </div>
-        </div>
-      </article>
-    `).join('');
-  }
+  const saveLocalProject = (project) => {
+    const existing = readStoredProjects();
+    const next = [...existing.filter((item) => String(item.id || 'local') !== String(project.id || 'local')), project];
+    writeStoredProjects(next);
+    localStorage.setItem('cpm-last-project', JSON.stringify(project));
+  };
 
-  async function refresh() {
-    const root = document.getElementById('project-list-root');
-    if (!root) return;
-    const query = (document.getElementById('project-search')?.value || '').trim().toLowerCase();
-    const projects = (await fetchProjects()).filter((project) => {
-      if (!query) return true;
-      const terms = [project.name, project.sector, project.country, project.plan].filter(Boolean).join(' ').toLowerCase();
-      return terms.includes(query);
-    });
-    root.innerHTML = renderCards(projects);
-  }
-
-  function ensureNode() {
-    const appElement = document.getElementById('app');
-    if (!appElement || document.getElementById('project-list-root')) return;
-    const panel = document.createElement('div');
-    panel.id = 'project-list-root';
-    panel.className = 'project-list-root';
-    appElement.appendChild(panel);
-  }
-
-  document.addEventListener('click', async (event) => {
-    const loadButton = event.target.closest('[data-project-load]');
-    if (loadButton) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      await refresh();
-      return;
-    }
-
-    const openButton = event.target.closest('[data-project-open]');
-    if (openButton) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      window.CPMOpenProject?.(openButton.dataset.projectOpen);
-      return;
-    }
-
-    const duplicateButton = event.target.closest('[data-project-duplicate]');
-    if (duplicateButton) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      window.CPMProjectActions?.duplicate?.(duplicateButton.dataset.projectDuplicate);
-    }
+  const headers = (json = false) => ({
+    ...(json ? { 'content-type': 'application/json' } : {}),
+    ...(getToken() ? { authorization: `Bearer ${getToken()}` } : {})
   });
-
-  ensureNode();
-  refresh();
-  window.CPMProjectList = { render: refresh, fetchProjects };
+  const request = async (path, options = {}) => {
+    let response;
+    try {
+      response = await fetch(`${API}${path}`, {
+        ...options,
+        headers: { ...headers(Boolean(options.body)), ...(options.headers || {}) }
+      });
+    } catch (error) {
+      throw new Error('API indisponible. Vérifiez que le serveur est démarré.', { cause: error });
+    }
+    if (!response.ok) {
+      let message = `Erreur API (${response.status})`;
+      try { message = (await response.json()).error || message; } catch { /* réponse non JSON */ }
+      throw new Error(message);
+    }
+    return response;
+  };
+  const local = () => {
+    try { return JSON.parse(localStorage.getItem('cpm-last-project') || 'null'); } catch { return null; }
+  };
+  const brief = () => ({
+    name: value('gen-name'),
+    sector: value('gen-sector'),
+    country: value('gen-country') || 'FR',
+    city: value('gen-city'),
+    plan: value('gen-plan') || 'pro',
+    language: value('gen-language') || value('gen-lang') || 'fr',
+    description: value('gen-description'),
+    additionalLanguages: [...document.querySelectorAll('[name="gen-languages"]:checked')].map((field) => field.value)
+  });
+  async function save() {
+    const data = brief();
+    if (!data.name || !data.sector) return;
+    const old = local();
+    try {
+      const path = old?.id ? `/projects/${encodeURIComponent(old.id)}` : '/projects';
+      const response = await request(path, { method: old?.id ? 'PUT' : 'POST', body: JSON.stringify(data) });
+      const project = await response.json();
+      saveLocalProject(project);
+      window.dispatchEvent(new CustomEvent('cpm:projects-changed', { detail: project }));
+    } catch (error) {
+      const fallback = { ...data, localOnly: true, id: old?.id || `local-${Date.now()}` };
+      saveLocalProject(fallback);
+      toast(`${error.message} Projet conservé localement.`);
+    }
+  }
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#generate-site')) window.setTimeout(save, 250);
+  });
+  window.CPMProjects = {
+    all: async () => (await request('/projects')).json().then((data) => data.projects || []),
+    get: async (id) => (await request(`/projects/${encodeURIComponent(id)}`)).json(),
+    remove: async (id) => request(`/projects/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    store: { read: readStoredProjects, write: writeStoredProjects, save: saveLocalProject }
+  };
 })();

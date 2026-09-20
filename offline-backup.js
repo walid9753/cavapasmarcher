@@ -1,9 +1,9 @@
 /* Free local backup/restore for local studio data. Authentication tokens are never exported. */
 (function () {
-  const STORAGE_KEY = 'cpm-local-backup-data';
   const keys = [
     'cpm-projects', 'cpm-last-project', 'cpm-site-versions', 'cpm-generated-sites',
-    'cpm-settings', 'cpm-prospects', 'cpm-quotes', 'cpm-templates', 'cpm-preferences'
+    'cpm-settings', 'cpm-prospects', 'cpm-quotes', 'cpm-templates', 'cpm-preferences',
+    'cpm-session-user'
   ];
   const toast = (message) => {
     const el = document.getElementById('toast');
@@ -21,12 +21,19 @@
     link.click();
     URL.revokeObjectURL(url);
   };
+
   function collect() {
+    const payload = Object.fromEntries(keys.map((key) => [key, localStorage.getItem(key)]));
+    delete payload['cpm-session-user'];
+    delete payload['cpm-session-token'];
     return {
-      format: 'cpm-local-backup', version: 2, exportedAt: new Date().toISOString(),
-      data: Object.fromEntries(keys.map((key) => [key, localStorage.getItem(key)]))
+      format: 'cpm-local-backup',
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      data: payload
     };
   }
+
   function restore(file) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -34,15 +41,20 @@
         const backup = JSON.parse(reader.result);
         if (backup.format !== 'cpm-local-backup' || !backup.data || typeof backup.data !== 'object') throw new Error('Format invalide');
         for (const key of keys) {
-          if (typeof backup.data[key] === 'string') localStorage.setItem(key, backup.data[key]);
+          const value = backup.data[key];
+          if (typeof value === 'string') localStorage.setItem(key, value);
+          else if (value === null && key !== 'cpm-session-user') localStorage.removeItem(key);
         }
         localStorage.removeItem('cpm-session-token');
         localStorage.removeItem('cpm-session-user');
         toast('Sauvegarde restaurée. Rechargez la page pour appliquer les données.');
-      } catch { toast('Impossible de restaurer cette sauvegarde.'); }
+      } catch {
+        toast('Impossible de restaurer cette sauvegarde.');
+      }
     };
     reader.readAsText(file);
   }
+
   document.addEventListener('click', (event) => {
     if (event.target.closest('[data-cpm-backup]')) {
       download(`cavapasmarcher-backup-${new Date().toISOString().slice(0, 10)}.json`, collect());

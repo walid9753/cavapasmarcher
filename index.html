@@ -1,3 +1,63 @@
-    <script src="local-storage.js"></script>
-    <script src="prospects.js"></script>
-    <script src="app.js"></script>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CavaPasMarcher — studio professionnel de création de sites web" />
+  <title>CavaPasMarcher — Studio web</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="generator.css" />
+  <link rel="stylesheet" href="sites-manager.css" />
+  <link rel="stylesheet" href="project-list.css" />
+  <link rel="stylesheet" href="project-actions.css" />
+  <link rel="stylesheet" href="auth-client.css" />
+  <link rel="stylesheet" href="offline-backup.css" />
+  <link rel="stylesheet" href="site-quality.css" />
+  <link rel="stylesheet" href="site-versioning.css" />
+  <link rel="stylesheet" href="site-export.css" />
+  <link rel="stylesheet" href="test-center.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navigation principale">
+      <a class="brand" href="#" data-page="overview"><span class="brand-mark">✦</span><span>CavaPas<br /><b>Marcher</b></span></a>
+      <div class="workspace"><span class="avatar">W</span><div><strong>Workspace</strong><small>Studio local</small></div></div>
+      <nav class="main-nav">
+        <span class="nav-label">Workspace</span>
+        <button class="nav-item active" type="button" data-page="overview">⌂ <span>Vue d’ensemble</span></button>
+        <button class="nav-item" type="button" data-page="prospects">◉ <span>Prospects</span></button>
+        <button class="nav-item" type="button" data-page="quotes">▱ <span>Devis & offres</span></button>
+        <button class="nav-item" type="button" data-page="sites">▣ <span>Sites</span></button>
+        <button class="nav-item" type="button" data-page="library">✦ <span>Bibliothèque</span></button>
+        <span class="nav-label">Système</span>
+        <button class="nav-item" type="button" data-page="tests">✓ <span>Centre de tests</span></button>
+        <button class="nav-item" type="button" data-page="settings">⚙ <span>Réglages</span></button>
+      </nav>
+      <div class="sidebar-footer"><span class="status-dot"></span> Système local opérationnel</div>
+    </aside>
+    <main id="app" class="main-content"></main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="local-storage.js"></script>
+  <script src="countries.js"></script>
+  <script src="prospects.js"></script>
+  <script src="api-client.js"></script>
+  <script src="auth-client.js"></script>
+  <script src="project-editor.js"></script>
+  <script src="project-actions.js"></script>
+  <script src="project-list.js"></script>
+  <script src="sites-manager.js"></script>
+  <script src="site-quality.js"></script>
+  <script src="site-versioning.js"></script>
+  <script src="site-export.js"></script>
+  <script src="offline-backup.js"></script>
+  <script src="generator.js"></script>
+  <script src="premium-generator.js"></script>
+  <script src="test-center.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

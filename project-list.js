@@ -1,11 +1,107 @@
 /* Project list and free local project management. */
 (function () {
-  const API = window.CPM_API_URL || 'http://localhost:8787/api'; const token = () => window.CPMAuth?.token?.() || window.CPM_API_TOKEN || localStorage.getItem('cpm-session-token') || ''; const headers = () => ({ ...(token() ? { authorization:`Bearer ${token()}` } : {}) }); const toast = (message) => { const el=document.getElementById('toast'); if(!el)return; el.textContent=message; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2600); }; const localProject=()=>{try{return JSON.parse(localStorage.getItem('cpm-last-project')||'null');}catch{return null;}}; const escapeHtml=(value)=>String(value||'').replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-  async function fetchProjects(){try{const response=await fetch(`${API}/projects`,{headers:headers()});if(!response.ok)throw new Error();const data=await response.json();return Array.isArray(data.projects)?data.projects:[];}catch{const saved=localProject();return saved?[saved]:[];}}
-  function renderCards(projects){if(!projects.length)return '<div class="project-list-empty">Aucun projet enregistré pour le moment.</div>';return projects.map((project)=>{const count=Number(project.versionCount||0);return `<article class="project-list-card"><div class="project-list-top"><span class="project-tag ${escapeHtml(project.plan||'pro')}">${escapeHtml(String(project.plan||'pro').toUpperCase())}</span><span class="project-count">${count} version${count>1?'s':''}</span></div><h3>${escapeHtml(project.name||'Projet sans nom')}</h3><p>${escapeHtml(project.sector||'Sans secteur')}</p><div class="project-meta"><span>${escapeHtml(project.country||'FR')}</span><span>${new Date(project.updatedAt||project.createdAt||Date.now()).toLocaleDateString('fr-FR')}</span></div><div class="project-list-actions"><button type="button" class="secondary-btn" data-project-load="${escapeHtml(project.id||'local')}">Ouvrir</button><button type="button" class="secondary-btn" data-project-delete="${escapeHtml(project.id||'local')}">Supprimer</button></div></article>`;}).join('');}
-  async function refresh(){const root=document.getElementById('project-list-root');if(!root)return;const query=(document.getElementById('project-search')?.value||'').trim().toLowerCase();const projects=(await fetchProjects()).sort((a,b)=>new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0)).filter((project)=>!query||[project.name,project.sector,project.country,project.plan].some((field)=>String(field||'').toLowerCase().includes(query)));root.innerHTML=`<section class="project-list-panel"><div class="project-list-header"><div><div class="eyebrow">PROJETS</div><h2>Mes créations</h2></div><input id="project-search" type="search" placeholder="Rechercher un projet" aria-label="Rechercher un projet" value="${escapeHtml(query)}"></div><div class="project-list-grid">${renderCards(projects)}</div></section>`;}
-  async function loadProject(id){const project=(await fetchProjects()).find((item)=>item.id===id)||localProject();if(!project)return toast('Projet introuvable.');localStorage.setItem('cpm-last-project',JSON.stringify(project));toast('Projet chargé.');window.dispatchEvent(new CustomEvent('cpm:project-loaded',{detail:project}));}
-  async function deleteProject(id){if(!id||id==='local')return toast('Suppression locale non disponible.');if(!window.confirm('Supprimer définitivement ce projet ?'))return;try{const response=await fetch(`${API}/projects/${encodeURIComponent(id)}`,{method:'DELETE',headers:headers()});if(!response.ok)throw new Error();toast('Projet supprimé.');window.dispatchEvent(new CustomEvent('cpm:projects-changed'));await refresh();}catch{toast('Suppression non disponible sans API autorisée.');}}
-  function ensureNode(){const app=document.getElementById('app');if(!app||document.getElementById('project-list-root'))return;const panel=document.createElement('div');panel.id='project-list-root';app.appendChild(panel);refresh();}
-  document.addEventListener('click',async(event)=>{const loadButton=event.target.closest('[data-project-load]');if(loadButton){event.preventDefault();await loadProject(loadButton.dataset.projectLoad);}const deleteButton=event.target.closest('[data-project-delete]');if(deleteButton){event.preventDefault();await deleteProject(deleteButton.dataset.projectDelete);}}); document.addEventListener('input',(event)=>{if(event.target.id==='project-search')refresh();}); window.addEventListener('cpm:auth-changed',ensureNode);window.addEventListener('cpm:project-loaded',ensureNode);window.addEventListener('cpm:projects-changed',ensureNode);window.addEventListener('DOMContentLoaded',ensureNode);setTimeout(ensureNode,250);
+  if (window.CPMProjectGallery) {
+    window.CPMProjectList = window.CPMProjectGallery;
+    return;
+  }
+
+  const API = window.CPM_API_URL || 'http://localhost:8787/api';
+  const token = () => window.CPMAuth?.token?.() || window.CPM_API_TOKEN || localStorage.getItem('cpm-session-token') || '';
+  const headers = () => ({ ...(token() ? { authorization: `Bearer ${token()}` } : {}) });
+
+  function getLocalProject() {
+    try {
+      return JSON.parse(localStorage.getItem('cpm-last-project') || 'null');
+    } catch {
+      return null;
+    }
+  }
+
+  async function fetchProjects() {
+    const local = getLocalProject();
+    const fallback = local ? [local] : [];
+    try {
+      const response = await fetch(`${API}/projects`, { headers: headers() });
+      if (!response.ok) return fallback;
+      const data = await response.json().catch(() => ({ projects: [] }));
+      const remote = Array.isArray(data.projects) ? data.projects : [];
+      const merged = [...fallback, ...remote];
+      const deduped = new Map();
+      for (const project of merged) if (project?.id) deduped.set(String(project.id), project);
+      return [...deduped.values()];
+    } catch {
+      return fallback;
+    }
+  }
+
+  function renderCards(projects) {
+    if (!projects.length) return '<div class="project-list-empty">Aucun projet enregistré pour le moment.</div>';
+    return projects.map((project) => `
+      <article class="saved-project card" data-project-id="${String(project.id || 'local')}">
+        <div class="saved-project-cover"><span>${String(project.sector || 'Site')}</span></div>
+        <div class="saved-project-body">
+          <div class="saved-project-meta">${String(project.country || 'FR')} · ${String(project.plan || 'pro')}</div>
+          <h3>${String(project.name || 'Projet sans titre')}</h3>
+          <p>${String(project.description || 'Projet enregistré dans le studio local.')}</p>
+          <div class="saved-project-footer">
+            <strong>${String(project.price || project.pricing?.total || 0)} €</strong>
+            <div class="saved-project-actions" data-project-id="${String(project.id || 'local')}">
+              <button type="button" class="button secondary" data-project-open="${String(project.id || 'local')}">Ouvrir</button>
+              <button type="button" class="button secondary" data-project-duplicate="${String(project.id || 'local')}">Dupliquer</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  async function refresh() {
+    const root = document.getElementById('project-list-root');
+    if (!root) return;
+    const query = (document.getElementById('project-search')?.value || '').trim().toLowerCase();
+    const projects = (await fetchProjects()).filter((project) => {
+      if (!query) return true;
+      const terms = [project.name, project.sector, project.country, project.plan].filter(Boolean).join(' ').toLowerCase();
+      return terms.includes(query);
+    });
+    root.innerHTML = renderCards(projects);
+  }
+
+  function ensureNode() {
+    const appElement = document.getElementById('app');
+    if (!appElement || document.getElementById('project-list-root')) return;
+    const panel = document.createElement('div');
+    panel.id = 'project-list-root';
+    panel.className = 'project-list-root';
+    appElement.appendChild(panel);
+  }
+
+  document.addEventListener('click', async (event) => {
+    const loadButton = event.target.closest('[data-project-load]');
+    if (loadButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      await refresh();
+      return;
+    }
+
+    const openButton = event.target.closest('[data-project-open]');
+    if (openButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.CPMOpenProject?.(openButton.dataset.projectOpen);
+      return;
+    }
+
+    const duplicateButton = event.target.closest('[data-project-duplicate]');
+    if (duplicateButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.CPMProjectActions?.duplicate?.(duplicateButton.dataset.projectDuplicate);
+    }
+  });
+
+  ensureNode();
+  refresh();
+  window.CPMProjectList = { render: refresh, fetchProjects };
 })();
